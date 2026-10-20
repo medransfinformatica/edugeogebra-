@@ -197,8 +197,8 @@
             return null;
         }
 
-        var claseId = numero(item.claseId || item.clase_id);
-        var alumnoId = numero(item.alumnoId || item.alumno_id);
+        var claseId = numero(item.claseId || item.clase_id || item.idClase);
+        var alumnoId = numero(item.alumnoId || item.alumno_id || item.idAlumno);
 
         if (!claseId || !alumnoId) {
             return null;
@@ -208,11 +208,19 @@
             id: numero(item.id) || (Date.now() * 1000 + Number(indice)),
             clase_id: claseId,
             alumno_id: alumnoId,
-            alumno_nombre: normalizarTexto(item.alumnoNombre || item.alumno_nombre),
-            alumno_email: normalizarEmail(item.alumnoEmail || item.alumno_email),
-            titulo_trabajo: normalizarTexto(item.tituloTrabajo || item.titulo_trabajo),
-            ggb_base64: String(item.ggbBase64 || item.ggb_base64 || ''),
-            fecha_entrega: item.fechaEntrega || item.fecha_entrega || ahora()
+            alumno_nombre: normalizarTexto(
+                item.alumnoNombre || item.alumno_nombre || item.nombreAlumno
+            ),
+            alumno_email: normalizarEmail(
+                item.alumnoEmail || item.alumno_email || item.emailAlumno
+            ),
+            titulo_trabajo: normalizarTexto(
+                item.tituloTrabajo || item.titulo_trabajo || item.titulo
+            ),
+            ggb_base64: String(
+                item.ggbBase64 || item.ggb_base64 || item.construccionGgb || item.base64 || ''
+            ),
+            fecha_entrega: item.fechaEntrega || item.fecha_entrega || item.fechaEnvio || ahora()
         };
     }
 
@@ -271,23 +279,70 @@
         var datos = Array.isArray(bruto) ? { clases: bruto } :
             (bruto && typeof bruto === 'object' ? bruto : {});
         var inscripciones = Array.isArray(datos.inscripciones) ? datos.inscripciones : [];
+        var clasesBrutas = Array.isArray(datos.clases) ? datos.clases : [];
         var clases = [];
         var trabajos = [];
+        var trabajosVistos = {};
 
-        (Array.isArray(datos.clases) ? datos.clases : []).forEach(function (item, indice) {
+        function agregarTrabajo(item, claseId) {
+            var entrada = item;
+
+            if (entrada && typeof entrada === 'object' && claseId &&
+                !entrada.claseId && !entrada.clase_id && !entrada.idClase) {
+                entrada = {};
+
+                Object.keys(item).forEach(function (clave) {
+                    entrada[clave] = item[clave];
+                });
+
+                entrada.claseId = claseId;
+            }
+
+            var trabajo = normalizarTrabajo(entrada, trabajos.length);
+
+            if (!trabajo) {
+                return;
+            }
+
+            var clave = [
+                trabajo.clase_id,
+                trabajo.alumno_id,
+                trabajo.titulo_trabajo,
+                trabajo.fecha_entrega,
+                String(trabajo.ggb_base64).slice(0, 48)
+            ].join('|');
+
+            if (trabajosVistos[clave]) {
+                return;
+            }
+
+            trabajosVistos[clave] = true;
+            trabajos.push(trabajo);
+        }
+
+        clasesBrutas.forEach(function (item, indice) {
             var clase = normalizarClase(item, indice, inscripciones);
 
-            if (clase) {
-                clases.push(clase);
+            if (!clase) {
+                return;
             }
+
+            clases.push(clase);
+
+            var entregas = Array.isArray(item.entregas) ? item.entregas :
+                (Array.isArray(item.trabajos) ? item.trabajos : []);
+
+            entregas.forEach(function (entrega) {
+                agregarTrabajo(entrega, clase.id);
+            });
         });
 
-        (Array.isArray(datos.trabajos) ? datos.trabajos : []).forEach(function (item, indice) {
-            var trabajo = normalizarTrabajo(item, indice);
+        (Array.isArray(datos.trabajos) ? datos.trabajos : []).forEach(function (item) {
+            agregarTrabajo(item, 0);
+        });
 
-            if (trabajo) {
-                trabajos.push(trabajo);
-            }
+        (Array.isArray(datos.entregas) ? datos.entregas : []).forEach(function (item) {
+            agregarTrabajo(item, 0);
         });
 
         return {
@@ -324,7 +379,8 @@
             actualizadaEn: clase.actualizada_en || clase.actualizadaEn || ahora(),
             alumnosInscritos: alumnos.map(serializarAlumno).filter(function (alumno) {
                 return !!alumno.id;
-            })
+            }),
+            entregas: []
         };
     }
 
@@ -332,12 +388,12 @@
         return {
             id: numero(trabajo.id),
             claseId: numero(trabajo.clase_id || trabajo.claseId),
-            alumnoId: numero(trabajo.alumno_id || trabajo.alumnoId),
-            alumnoNombre: normalizarTexto(trabajo.alumno_nombre || trabajo.alumnoNombre),
-            alumnoEmail: normalizarEmail(trabajo.alumno_email || trabajo.alumnoEmail),
+            idAlumno: numero(trabajo.alumno_id || trabajo.alumnoId),
+            nombreAlumno: normalizarTexto(trabajo.alumno_nombre || trabajo.alumnoNombre),
+            emailAlumno: normalizarEmail(trabajo.alumno_email || trabajo.alumnoEmail),
             tituloTrabajo: normalizarTexto(trabajo.titulo_trabajo || trabajo.tituloTrabajo),
-            ggbBase64: String(trabajo.ggb_base64 || trabajo.ggbBase64 || ''),
-            fechaEntrega: trabajo.fecha_entrega || trabajo.fechaEntrega || ahora()
+            construccionGgb: String(trabajo.ggb_base64 || trabajo.ggbBase64 || ''),
+            fechaEnvio: trabajo.fecha_entrega || trabajo.fechaEntrega || ahora()
         };
     }
 
@@ -363,15 +419,26 @@
             });
         });
 
+        (datos.trabajos || []).map(serializarTrabajo).forEach(function (trabajo) {
+            if (!trabajo.id) {
+                return;
+            }
+
+            var clase = clases.find(function (item) {
+                return item.id === trabajo.claseId;
+            });
+
+            if (clase) {
+                clase.entregas.push(trabajo);
+            }
+        });
+
         return {
             version: 2,
             actualizadoEn: ahora(),
             clases: clases,
             codigos: codigos,
-            inscripciones: inscripciones,
-            trabajos: (datos.trabajos || []).map(serializarTrabajo).filter(function (trabajo) {
-                return !!trabajo.id;
-            })
+            inscripciones: inscripciones
         };
     }
 

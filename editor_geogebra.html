@@ -47,8 +47,8 @@
                 <input type="text" id="titulo" class="form-control" placeholder="Ej: Teorema de Pitágoras" required>
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn-neon w-100" id="btn-enviar">
-                    <i class="fas fa-paper-plane"></i> Guardar y Enviar
+                <button type="submit" class="btn-neon w-100" id="btn-enviar" disabled aria-busy="true">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando editor…
                 </button>
             </div>
         </form>
@@ -58,7 +58,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="./config-db.js?v=1"></script>
-<script src="./cloud.js?v=5"></script>
+<script src="./cloud.js?v=6"></script>
 <script src="./db.js?v=7"></script>
 <script src="./utils.js?v=4"></script>
 <script src="./auth.js?v=4"></script>
@@ -76,9 +76,14 @@
         var alertas = document.getElementById('editor-alertas');
         var form = document.getElementById('form-trabajo');
         var btnVolver = document.getElementById('btn-volver');
+        var btnEnviar = document.getElementById('btn-enviar');
         var claseId = Number(new URLSearchParams(window.location.search).get('clase_id')) || 0;
         var clase = null;
-        var ggbApplet = null;
+        var ggbApi = null;
+        var ggbWrapper = null;
+        var appletListo = false;
+        var temporizadorApplet = null;
+        var envioEnCurso = false;
 
         if (sesion.rol === 'profesor') {
             btnVolver.href = './panel_profesor.html?clase_id=' + claseId;
@@ -90,6 +95,218 @@
             GGS_UTILS.mostrarAlerta(alertas, mensaje, tipo);
         }
 
+        function actualizarBotonEditor() {
+            if (envioEnCurso) {
+                return;
+            }
+
+            btnEnviar.disabled = !appletListo;
+            btnEnviar.setAttribute('aria-busy', appletListo ? 'false' : 'true');
+            btnEnviar.innerHTML = appletListo ?
+                '<i class="fas fa-paper-plane"></i> Guardar y Enviar' :
+                '<i class="fas fa-spinner fa-spin"></i> Cargando editor…';
+        }
+
+        function bloquearBotonEditor(texto) {
+            btnEnviar.disabled = true;
+            btnEnviar.setAttribute('aria-busy', 'false');
+            btnEnviar.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + texto;
+        }
+
+        function marcarAppletListo(api) {
+            var candidato = api || window.ggbApplet;
+
+            if (!candidato) {
+                return;
+            }
+
+            ggbApi = candidato;
+            appletListo = true;
+
+            if (temporizadorApplet) {
+                window.clearTimeout(temporizadorApplet);
+                temporizadorApplet = null;
+            }
+
+            actualizarBotonEditor();
+        }
+
+        function confirmarApi(api, intentos) {
+            var candidato = api || window.ggbApplet;
+
+            if (candidato &&
+                (typeof candidato.getGgbBase64 === 'function' ||
+                    typeof candidato.getBase64 === 'function')) {
+                marcarAppletListo(candidato);
+                return;
+            }
+
+            if (intentos >= 20) {
+                if (!appletListo) {
+                    mostrarAlerta('El editor de GeoGebra no terminó de cargar. Revisá tu conexión y recargá la página.', 'danger');
+                    bloquearBotonEditor('Editor no disponible');
+                }
+                return;
+            }
+
+            window.setTimeout(function () {
+                confirmarApi(candidato, intentos + 1);
+            }, 250);
+        }
+
+        function obtenerConstruccionBase64() {
+            return new Promise(function (resolve, reject) {
+                var api = ggbApi || window.ggbApplet;
+
+                if (!api) {
+                    reject(new Error('El editor de GeoGebra todavía no está listo.'));
+                    return;
+                }
+
+                if (typeof api.getGgbBase64 === 'function') {
+                    try {
+                        var directo = api.getGgbBase64();
+
+                        if (typeof directo === 'string' && directo.length) {
+                            resolve(directo);
+                            return;
+                        }
+                    } catch (error) {
+                        // Si falla la variante directa, se intenta getBase64(callback).
+                    }
+                }
+
+                if (typeof api.getBase64 !== 'function') {
+                    reject(new Error('La API de GeoGebra no permite exportar la construcción. Recargá la página.'));
+                    return;
+                }
+
+                var terminado = false;
+                var temporizador = window.setTimeout(function () {
+                    if (terminado) {
+                        return;
+                    }
+
+                    terminado = true;
+                    reject(new Error('GeoGebra tardó demasiado en exportar la construcción. Intentá de nuevo.'));
+                }, 12000);
+
+                function finalizar(base64) {
+                    if (terminado) {
+                        return;
+                    }
+
+                    terminado = true;
+                    window.clearTimeout(temporizador);
+
+                    if (typeof base64 === 'string' && base64.length) {
+                        resolve(base64);
+                    } else {
+                        reject(new Error('GeoGebra no devolvió la construcción. Intentá de nuevo.'));
+                    }
+                }
+
+                try {
+                    var resultado = api.getBase64(finalizar);
+
+                    if (typeof resultado === 'string' && resultado.length) {
+                        finalizar(resultado);
+                    } else if (resultado && typeof resultado.then === 'function') {
+                        resultado.then(finalizar, function (error) {
+                            if (terminado) {
+                                return;
+                            }
+
+                            terminado = true;
+                            window.clearTimeout(temporizador);
+                            reject(error || new Error('No se pudo exportar la construcción.'));
+                        });
+                    }
+                } catch (error) {
+                    if (terminado) {
+                        return;
+                    }
+
+                    terminado = true;
+                    window.clearTimeout(temporizador);
+                    reject(error);
+                }
+            });
+        }
+
+        function restaurarBotonEnvio() {
+            envioEnCurso = false;
+            actualizarBotonEditor();
+        }
+
+        function manejarEnvio(evento) {
+            evento.preventDefault();
+
+            if (envioEnCurso) {
+                return;
+            }
+
+            var titulo = document.getElementById('titulo').value.trim();
+
+            if (!titulo) {
+                mostrarAlerta('El título es obligatorio.', 'danger');
+                return;
+            }
+
+            if (!appletListo || !ggbApi) {
+                mostrarAlerta('El editor todavía no está listo. Esperá unos segundos e intentá de nuevo.', 'warning');
+                return;
+            }
+
+            if (GGS_DB.nubeConfigurada() && !GGS_DB.nubeDisponible()) {
+                mostrarAlerta('No hay conexión con el servidor JSON. No se puede enviar el trabajo al profesor en este momento.', 'danger');
+                return;
+            }
+
+            envioEnCurso = true;
+            btnEnviar.disabled = true;
+            btnEnviar.setAttribute('aria-busy', 'true');
+            btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando…';
+
+            obtenerConstruccionBase64()
+                .then(function (base64String) {
+                    if (!base64String || base64String.length < 50) {
+                        throw new Error('No hay construcción para guardar. Creá algo en el lienzo primero.');
+                    }
+
+                    return GGS_DB.guardarTrabajo({
+                        clase_id: claseId,
+                        alumno_id: sesion.usuario_id,
+                        titulo_trabajo: titulo,
+                        ggb_base64: base64String
+                    });
+                })
+                .then(function () {
+                    mostrarAlerta('¡Trabajo enviado correctamente al profesor!', 'success');
+                    form.reset();
+
+                    if (ggbApi && typeof ggbApi.reset === 'function') {
+                        ggbApi.reset();
+                    }
+
+                    if (sesion.rol === 'alumno') {
+                        window.setTimeout(function () {
+                            window.location.href = './panel_alumno.html';
+                        }, 1200);
+                        return;
+                    }
+
+                    restaurarBotonEnvio();
+                })
+                .catch(function (error) {
+                    mostrarAlerta('No se pudo enviar el trabajo: ' +
+                        (error && error.message ? error.message : 'error desconocido.'), 'danger');
+                    restaurarBotonEnvio();
+                });
+        }
+
+        form.addEventListener('submit', manejarEnvio);
+
         form.classList.add('d-none');
         GGS_UTILS.mostrarAlerta(alertas, 'Cargando datos de la clase...', 'info');
 
@@ -99,89 +316,75 @@
 
             if (!clase) {
                 mostrarAlerta('Falta el ID de la clase o la clase no existe.', 'danger');
+                bloquearBotonEditor('Editor no disponible');
                 return;
             }
 
             if (sesion.rol === 'alumno' && !GGS_DB.estaInscripto(claseId, sesion.usuario_id)) {
                 mostrarAlerta('No estás inscripto en esta clase. Volvé al panel y unite con el código de acceso.', 'danger');
+                bloquearBotonEditor('Editor no disponible');
                 return;
             }
 
             document.getElementById('nombre-clase').textContent = clase.nombre_clase;
             form.classList.remove('d-none');
+            actualizarBotonEditor();
 
-            ggbApplet = new GGBApplet({
-                "appName": "classic",
-                "width": 800,
-                "height": 600,
-                "showToolBar": true,
-                "showMenuBar": true,
-                "showAlgebraInput": true,
-                "showResetIcon": true,
-                "enableLabelDrags": false,
-                "enableShiftDragZoom": true,
-                "enableRightClick": false,
-                "scaleContainerClass": "ggb-element"
-            }, true);
+            window.ggbOnInit = function () {
+                confirmarApi(window.ggbApplet, 0);
+            };
 
-            ggbApplet.inject('ggb-element');
+            try {
+                ggbWrapper = new GGBApplet({
+                    "appName": "classic",
+                    "width": 800,
+                    "height": 600,
+                    "showToolBar": true,
+                    "showMenuBar": true,
+                    "showAlgebraInput": true,
+                    "showResetIcon": true,
+                    "enableLabelDrags": false,
+                    "enableShiftDragZoom": true,
+                    "enableRightClick": false,
+                    "scaleContainerClass": "ggb-element",
+                    "appletOnLoad": function (api) {
+                        confirmarApi(api, 0);
+                    }
+                }, true);
 
-            form.addEventListener('submit', function (evento) {
-                evento.preventDefault();
+                ggbWrapper.inject('ggb-element');
+            } catch (error) {
+                mostrarAlerta('No se pudo iniciar el editor de GeoGebra: ' + error.message, 'danger');
+                bloquearBotonEditor('Editor no disponible');
+                return;
+            }
 
-                var btn = document.getElementById('btn-enviar');
-                var titulo = document.getElementById('titulo').value.trim();
+            if (temporizadorApplet) {
+                window.clearTimeout(temporizadorApplet);
+            }
 
-                if (!titulo) {
-                    mostrarAlerta('El título es obligatorio.', 'danger');
+            temporizadorApplet = window.setTimeout(function () {
+                if (appletListo) {
                     return;
                 }
 
-                if (!ggbApplet) {
-                    mostrarAlerta('El editor todavía no está listo. Esperá unos segundos e intentá de nuevo.', 'danger');
-                    return;
-                }
-
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando…';
-
-                function restaurarBoton() {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Guardar y Enviar';
-                }
-
-                try {
-                    ggbApplet.getBase64(function (base64String) {
-                        if (!base64String || base64String.length < 50) {
-                            mostrarAlerta('No hay construcción para guardar. Creá algo en el lienzo primero.', 'danger');
-                            restaurarBoton();
-                            return;
-                        }
-
-                        GGS_DB.guardarTrabajo({
-                            clase_id: claseId,
-                            alumno_id: sesion.usuario_id,
-                            titulo_trabajo: titulo,
-                            ggb_base64: base64String
-                        }).then(function () {
-                            mostrarAlerta('Trabajo enviado correctamente. Ya podés verlo en tu panel.', 'success');
-                            form.reset();
-                            ggbApplet.reset();
-                        }).catch(function (error) {
-                            mostrarAlerta('Error al guardar: ' + error.message, 'danger');
-                        }).then(restaurarBoton);
-                    });
-                } catch (error) {
-                    mostrarAlerta('El editor todavía no está listo. Esperá unos segundos e intentá de nuevo.', 'danger');
-                    restaurarBoton();
-                }
-            });
+                temporizadorApplet = null;
+                mostrarAlerta('El editor de GeoGebra tardó demasiado en cargar. Revisá tu conexión y recargá la página.', 'danger');
+                bloquearBotonEditor('Editor no disponible');
+            }, 30000);
         }
 
         Promise.resolve(GGS_DB.ready)
-            .then(iniciarEditor)
+            .then(function (sincronizado) {
+                iniciarEditor();
+
+                if (GGS_DB.nubeConfigurada() && !sincronizado) {
+                    mostrarAlerta('No se pudo sincronizar con el servidor JSON. Verificá tu conexión antes de enviar el trabajo.', 'warning');
+                }
+            })
             .catch(function (error) {
                 mostrarAlerta('No se pudieron cargar los datos de la clase: ' + error.message, 'danger');
+                bloquearBotonEditor('Editor no disponible');
             });
     })();
 </script>
