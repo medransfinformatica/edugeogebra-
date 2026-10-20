@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel — Profesor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./theme.css">
+    <style>
+        .clase-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(0, 242, 255, 0.06);
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .clase-item:hover {
+            border-color: rgba(0, 242, 255, 0.15);
+            background: rgba(0, 242, 255, 0.03);
+        }
+        .clase-item .codigo-badge {
+            background: rgba(0, 242, 255, 0.08);
+            color: #00f2ff;
+            border-color: rgba(0, 242, 255, 0.15);
+            font-size: 0.8rem;
+        }
+        .clase-item .tema-text {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-navbar"></div>
+
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="glass-card">
+                <h4><i class="fas fa-plus-circle"></i> Nueva Clase</h4>
+                <div id="profe-alertas" class="mb-3"></div>
+                <form id="form-clase" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="nombre-clase">Nombre de la clase</label>
+                        <input type="text" id="nombre-clase" class="form-control" placeholder="Ej: Álgebra 5°A" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="tema-clase">Tema (opcional)</label>
+                        <input type="text" id="tema-clase" class="form-control" placeholder="Ej: Ecuaciones cuadráticas">
+                    </div>
+                    <button type="submit" class="btn-neon w-100"><i class="fas fa-wand-magic-sparkles me-1"></i> Generar Clase</button>
+                </form>
+            </div>
+
+            <div class="glass-card mt-3">
+                <h4><i class="fas fa-chalkboard"></i> Mis Clases</h4>
+                <div id="lista-clases"><p class="text-muted mt-2 mb-0" style="font-size:0.9rem;">Cargando clases...</p></div>
+            </div>
+        </div>
+
+        <div class="col-lg-7" id="detalle-clase"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./config-db.js?v=1"></script>
+<script src="./cloud.js?v=5"></script>
+<script src="./db.js?v=7"></script>
+<script src="./utils.js?v=4"></script>
+<script src="./auth.js?v=4"></script>
+<script>
+    (function () {
+        'use strict';
+
+        var sesion = GGS_LAYOUT.requerir(['profesor']);
+        if (!sesion) {
+            return;
+        }
+
+        GGS_LAYOUT.renderNav('panel_profesor');
+
+        var alertas = document.getElementById('profe-alertas');
+        var lista = document.getElementById('lista-clases');
+        var detalle = document.getElementById('detalle-clase');
+        var formClase = document.getElementById('form-clase');
+        var claseSeleccionada = Number(new URLSearchParams(window.location.search).get('clase_id')) || 0;
+
+        function mostrarAlerta(mensaje, tipo) {
+            GGS_UTILS.mostrarAlerta(alertas, mensaje, tipo);
+        }
+
+        function renderLista() {
+            var clases = GGS_DB.getClasesDeProfesor(sesion.usuario_id);
+
+            if (!clases.length) {
+                lista.innerHTML = '<p class="text-muted mt-2 mb-0" style="font-size:0.9rem;">Todavía no creaste ninguna clase.</p>';
+                return;
+            }
+
+            lista.innerHTML = clases.map(function (clase) {
+                var idClase = Number(clase.id) || 0;
+                var seleccionada = idClase === Number(claseSeleccionada);
+                var tema = clase.tema ? GGS_UTILS.escapeHtml(clase.tema) : 'Sin tema';
+
+                return '<div class="clase-item" data-id="' + idClase + '">' +
+                    '<div class="d-flex justify-content-between align-items-start">' +
+                        '<div>' +
+                            '<strong style="color:#fff;">' + GGS_UTILS.escapeHtml(clase.nombre_clase) + '</strong>' +
+                            '<span class="codigo-badge ms-2"><i class="fas fa-key"></i> ' + GGS_UTILS.escapeHtml(clase.codigo_acceso) + '</span>' +
+                            '<div class="tema-text">' + tema + '</div>' +
+                        '</div>' +
+                        '<div class="d-flex align-items-center gap-2">' +
+                            (seleccionada ? '<span style="color:#00f2ff;"><i class="fas fa-chevron-down"></i></span>' : '') +
+                            '<button type="button" class="btn-delete-clase" data-id="' + idClase + '" title="Eliminar clase">' +
+                                '<i class="fas fa-trash-alt"></i>' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        function renderDetalle() {
+            var clase = claseSeleccionada ? GGS_DB.getClasePorId(claseSeleccionada) : null;
+
+            if (!clase || Number(clase.profesor_id) !== Number(sesion.usuario_id)) {
+                detalle.innerHTML =
+                    '<div class="glass-card d-flex flex-column align-items-center justify-content-center" style="min-height:300px;">' +
+                        '<i class="fas fa-arrow-left" style="font-size:2rem; color:rgba(0,242,255,0.2); margin-bottom:1rem;"></i>' +
+                        '<p style="color:rgba(255,255,255,0.25); margin:0;">Seleccioná una clase para ver sus detalles.</p>' +
+                    '</div>';
+                return;
+            }
+
+            var idClase = Number(clase.id) || 0;
+            var alumnos = GGS_DB.getAlumnosDeClase(idClase);
+            var contenidoAlumnos;
+
+            if (!alumnos.length) {
+                contenidoAlumnos = '<p class="text-muted mb-0" style="font-size:0.85rem;">Ningún alumno se unió aún. Compartí el código de acceso.</p>';
+            } else {
+                var filas = alumnos.map(function (alumno) {
+                    var trabajos = GGS_DB.getTrabajosDeAlumnoEnClase(idClase, alumno.id);
+                    var celdaTrabajos;
+
+                    if (!trabajos.length) {
+                        celdaTrabajos = '<span style="color:rgba(255,255,255,0.2); font-size:0.8rem;">—</span>';
+                    } else {
+                        celdaTrabajos = trabajos.map(function (trabajo) {
+                            var idTrabajo = Number(trabajo.id) || 0;
+
+                            return '<div class="mb-1">' +
+                                '<a href="./visor_profesor.html?id=' + idTrabajo + '" class="btn-neon-sm purple" target="_blank" rel="noopener noreferrer">' +
+                                    '<i class="fas fa-eye"></i> ' + GGS_UTILS.escapeHtml(trabajo.titulo_trabajo) +
+                                '</a>' +
+                                '<small style="color:rgba(255,255,255,0.25); display:block;">' +
+                                    GGS_UTILS.formatFecha(trabajo.fecha_entrega) +
+                                '</small>' +
+                            '</div>';
+                        }).join('');
+                    }
+
+                    return '<tr>' +
+                        '<td><span class="alumno-tag"><i class="fas fa-user-graduate"></i> ' + GGS_UTILS.escapeHtml(alumno.nombre) + '</span></td>' +
+                        '<td style="color:rgba(255,255,255,0.4); font-size:0.85rem;">' + GGS_UTILS.escapeHtml(alumno.email) + '</td>' +
+                        '<td>' + celdaTrabajos + '</td>' +
+                    '</tr>';
+                }).join('');
+
+                contenidoAlumnos =
+                    '<div class="glass-table mt-2">' +
+                        '<table class="table">' +
+                            '<thead><tr><th>Alumno</th><th>Email</th><th>Trabajos</th></tr></thead>' +
+                            '<tbody>' + filas + '</tbody>' +
+                        '</table>' +
+                    '</div>';
+            }
+
+            detalle.innerHTML =
+                '<div class="glass-card">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">' +
+                        '<h4 style="margin:0;"><i class="fas fa-chalkboard"></i> ' + GGS_UTILS.escapeHtml(clase.nombre_clase) + '</h4>' +
+                        '<span class="codigo-badge" style="font-size:0.9rem; padding:0.3rem 0.8rem;">' +
+                            '<i class="fas fa-key"></i> ' + GGS_UTILS.escapeHtml(clase.codigo_acceso) +
+                        '</span>' +
+                    '</div>' +
+                    (clase.tema ? '<p style="color:rgba(255,255,255,0.4); font-size:0.9rem;"><i class="fas fa-tag"></i> ' + GGS_UTILS.escapeHtml(clase.tema) + '</p>' : '') +
+                    '<h5 style="color:rgba(255,255,255,0.7); font-size:0.95rem; margin-top:1.5rem;">' +
+                        '<i class="fas fa-users"></i> Alumnos inscriptos (' + alumnos.length + ')' +
+                    '</h5>' +
+                    contenidoAlumnos +
+                '</div>';
+        }
+
+        formClase.addEventListener('submit', function (evento) {
+            evento.preventDefault();
+
+            var nombre = document.getElementById('nombre-clase').value.trim();
+            var tema = document.getElementById('tema-clase').value.trim();
+
+            if (!nombre) {
+                mostrarAlerta('El nombre de la clase es obligatorio.', 'danger');
+                return;
+            }
+
+            var boton = formClase.querySelector('button[type="submit"]');
+            var contenidoBoton = boton ? boton.innerHTML : '';
+
+            if (boton) {
+                boton.disabled = true;
+                boton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Creando...';
+            }
+
+            GGS_DB.crearClase(sesion.usuario_id, nombre, tema)
+                .then(function (clase) {
+                    claseSeleccionada = Number(clase.id);
+                    window.history.replaceState(null, '', './panel_profesor.html?clase_id=' + clase.id);
+                    mostrarAlerta('Clase creada. Compartí este código: ' + clase.codigo_acceso, 'success');
+                    formClase.reset();
+                    renderLista();
+                    renderDetalle();
+                })
+                .catch(function (error) {
+                    mostrarAlerta(error.message, 'danger');
+                })
+                .then(function () {
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.innerHTML = contenidoBoton;
+                    }
+                });
+        });
+
+        lista.addEventListener('click', function (evento) {
+            var botonEliminar = evento.target.closest('.btn-delete-clase');
+
+            if (botonEliminar) {
+                evento.stopPropagation();
+
+                var id = Number(botonEliminar.getAttribute('data-id'));
+                var confirmado = window.confirm('¿Estás seguro de que querés eliminar esta clase? Se borrarán también las entregas de los alumnos.');
+
+                if (!confirmado) {
+                    return;
+                }
+
+                var contenidoBoton = botonEliminar.innerHTML;
+
+                botonEliminar.disabled = true;
+                botonEliminar.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                function restaurarBotonEliminar() {
+                    botonEliminar.disabled = false;
+                    botonEliminar.innerHTML = contenidoBoton;
+                }
+
+                GGS_DB.eliminarClase(id, sesion.usuario_id)
+                    .then(function (eliminada) {
+                        if (!eliminada) {
+                            mostrarAlerta('No se pudo eliminar la clase.', 'danger');
+                            return;
+                        }
+
+                        if (Number(claseSeleccionada) === id) {
+                            claseSeleccionada = 0;
+                            window.history.replaceState(null, '', './panel_profesor.html');
+                        }
+
+                        mostrarAlerta('Clase eliminada.', 'success');
+                        renderLista();
+                        renderDetalle();
+                    })
+                    .catch(function (error) {
+                        mostrarAlerta('No se pudo eliminar la clase: ' + error.message, 'danger');
+                    })
+                    .then(restaurarBotonEliminar);
+
+                return;
+            }
+
+            var item = evento.target.closest('.clase-item');
+
+            if (item) {
+                window.location.href = './panel_profesor.html?clase_id=' + item.getAttribute('data-id');
+            }
+        });
+
+        if (window.location.protocol === 'file:') {
+            mostrarAlerta('Estás abriendo la app como archivo local. Publicá la app en Render o usá un servidor HTTP para compartir las clases.', 'danger');
+        }
+
+        Promise.resolve(GGS_DB.ready)
+            .then(function (sincronizado) {
+                if (GGS_DB.nubeConfigurada() && !sincronizado) {
+                    mostrarAlerta('No se pudo sincronizar con el servidor JSON. Revisá config-db.js y tu conexión a internet.', 'danger');
+                }
+
+                renderLista();
+                renderDetalle();
+            })
+            .catch(function (error) {
+                mostrarAlerta('No se pudieron cargar las clases: ' + error.message, 'danger');
+                renderLista();
+                renderDetalle();
+            });
+
+        GGS_UTILS.escucharCambios(function () {
+            renderLista();
+            renderDetalle();
+        });
+    })();
+</script>
+</body>
+</html>

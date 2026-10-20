@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoGebra School — Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./theme.css">
+    <link rel="stylesheet" href="./auth.css">
+</head>
+<body class="auth-body">
+
+<div class="auth-wrapper">
+    <div class="glass-card">
+        <div class="brand">
+            <i class="fas fa-cube"></i>
+            <h1>GeoGebra <span>School</span></h1>
+            <p>Plataforma educativa de matemática dinámica</p>
+        </div>
+
+        <div id="auth-alertas" class="mb-3"></div>
+
+        <ul class="nav nav-tabs justify-content-center" id="authTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab" aria-controls="login" aria-selected="true">
+                    <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab" aria-controls="register" aria-selected="false">
+                    <i class="fas fa-user-plus me-1"></i> Registrarse
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="login" role="tabpanel" aria-labelledby="login-tab">
+                <form id="form-login" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="login-email"><i class="fas fa-envelope me-1"></i> Email</label>
+                        <input type="email" id="login-email" class="form-control" placeholder="tu@email.com" autocomplete="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="login-password"><i class="fas fa-lock me-1"></i> Contraseña</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
+                    </div>
+                    <button type="submit" class="btn-neon"><i class="fas fa-arrow-right me-1"></i> Ingresar</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="register" role="tabpanel" aria-labelledby="register-tab">
+                <form id="form-registro" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label" for="reg-nombre"><i class="fas fa-user me-1"></i> Nombre completo</label>
+                        <input type="text" id="reg-nombre" class="form-control" placeholder="Ej: Ana López" autocomplete="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="reg-email"><i class="fas fa-envelope me-1"></i> Email</label>
+                        <input type="email" id="reg-email" class="form-control" placeholder="tu@email.com" autocomplete="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="reg-password"><i class="fas fa-lock me-1"></i> Contraseña</label>
+                        <input type="password" id="reg-password" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label d-block"><i class="fas fa-user-tag me-1"></i> Rol</label>
+                        <div class="d-flex gap-3 justify-content-center">
+                            <label>
+                                <input type="radio" name="rol" value="alumno" checked>
+                                <span class="badge-rol active"><i class="fas fa-graduation-cap me-1"></i> Alumno</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="rol" value="profesor">
+                                <span class="badge-rol"><i class="fas fa-chalkboard-teacher me-1"></i> Profesor</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-neon"><i class="fas fa-user-plus me-1"></i> Crear Cuenta</button>
+                </form>
+            </div>
+        </div>
+
+        <details class="demo-accounts">
+            <summary><i class="fas fa-key"></i> Cuentas de prueba</summary>
+            <ul>
+                <li><span>Alumno</span> <code>alumno@edunet.com / alumno123</code></li>
+                <li><span>Profesor</span> <code>profesor@edunet.com / profesor123</code></li>
+                <li><span>Administrador</span> <code>admin@edunet.com / admin123</code></li>
+            </ul>
+        </details>
+
+        <p class="text-center mt-3 mb-0" style="color:rgba(255,255,255,0.2); font-size:0.75rem;">
+            <i class="fas fa-shield-alt me-1"></i> Tu cuenta y sesión se guardan en este dispositivo; las clases se sincronizan con la nube
+        </p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="./config-db.js?v=1"></script>
+<script src="./cloud.js?v=5"></script>
+<script src="./db.js?v=7"></script>
+<script src="./utils.js?v=4"></script>
+<script src="./auth.js?v=4"></script>
+<script>
+    (function () {
+        'use strict';
+
+        var alertas = document.getElementById('auth-alertas');
+        var sesion = GGS_DB.getSesion();
+
+        if (sesion) {
+            window.location.replace(GGS_LAYOUT.inicioSegunRol(sesion.rol));
+            return;
+        }
+
+        function mostrarAlerta(mensaje, tipo) {
+            GGS_UTILS.mostrarAlerta(alertas, mensaje, tipo);
+        }
+
+        function sincronizarRoles() {
+            document.querySelectorAll('.badge-rol').forEach(function (etiqueta) {
+                var input = etiqueta.parentElement.querySelector('input[type="radio"]');
+                etiqueta.classList.toggle('active', !!(input && input.checked));
+            });
+        }
+
+        document.querySelectorAll('.badge-rol').forEach(function (etiqueta) {
+            etiqueta.addEventListener('click', function () {
+                var input = etiqueta.parentElement.querySelector('input[type="radio"]');
+                if (input) {
+                    input.checked = true;
+                    sincronizarRoles();
+                }
+            });
+        });
+
+        document.getElementById('form-login').addEventListener('submit', function (evento) {
+            evento.preventDefault();
+
+            var email = document.getElementById('login-email').value.trim();
+            var password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                mostrarAlerta('Completá email y contraseña.', 'danger');
+                return;
+            }
+
+            var sesionActiva = GGS_DB.login(email, password);
+
+            if (!sesionActiva) {
+                mostrarAlerta('Email o contraseña incorrectos.', 'danger');
+                return;
+            }
+
+            window.location.replace(GGS_LAYOUT.inicioSegunRol(sesionActiva.rol));
+        });
+
+        document.getElementById('form-registro').addEventListener('submit', function (evento) {
+            evento.preventDefault();
+
+            var nombre = document.getElementById('reg-nombre').value.trim();
+            var email = document.getElementById('reg-email').value.trim();
+            var password = document.getElementById('reg-password').value;
+            var rolSeleccionado = document.querySelector('input[name="rol"]:checked');
+
+            if (!nombre || !email || !password || !rolSeleccionado) {
+                mostrarAlerta('Completá todos los campos.', 'danger');
+                return;
+            }
+
+            if (password.length < 6) {
+                mostrarAlerta('La contraseña debe tener al menos 6 caracteres.', 'danger');
+                return;
+            }
+
+            try {
+                GGS_DB.registrar({
+                    nombre: nombre,
+                    email: email,
+                    password: password,
+                    rol: rolSeleccionado.value
+                });
+
+                mostrarAlerta('Registro exitoso. Ahora iniciá sesión.', 'success');
+                document.getElementById('form-registro').reset();
+                document.getElementById('login-email').value = email;
+                document.getElementById('reg-email').value = '';
+                sincronizarRoles();
+
+                var tabLogin = document.getElementById('login-tab');
+                if (window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(tabLogin).show();
+                }
+            } catch (error) {
+                mostrarAlerta(error.message, 'danger');
+            }
+        });
+    })();
+</script>
+</body>
+</html>

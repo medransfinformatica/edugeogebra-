@@ -1,0 +1,473 @@
+:root {
+    --gg-bg: #050a14;
+    --gg-cyan: #00f2ff;
+    --gg-purple: #b300ff;
+    --gg-text: #e0e0e0;
+    --gg-muted: rgba(255, 255, 255, 0.4);
+    --gg-border: rgba(0, 242, 255, 0.10);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--gg-bg);
+    color: var(--gg-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    width: 70vw;
+    height: 70vw;
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::before {
+    top: -30%;
+    left: -20%;
+    background: radial-gradient(circle, rgba(0, 242, 255, 0.06) 0%, transparent 70%);
+}
+
+body::after {
+    bottom: -30%;
+    right: -20%;
+    background: radial-gradient(circle, rgba(179, 0, 255, 0.06) 0%, transparent 70%);
+}
+
+.container,
+.auth-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Barra de navegación
+   -------------------------------------------------------------------------- */
+.navbar-futura {
+    background: rgba(5, 10, 20, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gg-border);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    padding: 0.5rem 1rem;
+    position: relative;
+    z-index: 2;
+}
+
+.navbar-futura .navbar-brand {
+    color: var(--gg-cyan);
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+}
+
+.navbar-futura .navbar-brand i {
+    margin-right: 0.4rem;
+}
+
+.navbar-futura .nav-link {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+
+.navbar-futura .nav-link:hover,
+.navbar-futura .nav-link.active {
+    color: var(--gg-cyan);
+    background: rgba(0, 242, 255, 0.06);
+}
+
+.navbar-futura .nav-link i {
+    margin-right: 0.3rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+.user-info .avatar-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(179, 0, 255, 0.15));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 242, 255, 0.25);
+    color: var(--gg-cyan);
+    font-size: 0.9rem;
+}
+
+.badge-rol-nav {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.7rem;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-rol-nav.profe {
+    background: rgba(179, 0, 255, 0.2);
+    color: #c44dff;
+    border: 1px solid rgba(179, 0, 255, 0.3);
+    box-shadow: 0 0 10px rgba(179, 0, 255, 0.15);
+}
+
+.badge-rol-nav.alumno {
+    background: rgba(0, 242, 255, 0.12);
+    color: var(--gg-cyan);
+    border: 1px solid rgba(0, 242, 255, 0.25);
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.1);
+}
+
+.btn-logout {
+    background: rgba(255, 51, 102, 0.1);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    color: #ff6688;
+    border-radius: 10px;
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn-logout:hover {
+    background: rgba(255, 51, 102, 0.2);
+    border-color: #ff3366;
+    color: #ff3366;
+}
+
+/* --------------------------------------------------------------------------
+   Tarjetas y tablas
+   -------------------------------------------------------------------------- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--gg-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 0 30px rgba(0, 242, 255, 0.04);
+}
+
+.glass-table {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 242, 255, 0.06);
+    overflow: auto;
+}
+
+.glass-table table {
+    margin-bottom: 0;
+    color: var(--gg-text);
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--gg-text);
+    --bs-table-border-color: rgba(0, 242, 255, 0.04);
+}
+
+.glass-table th {
+    background: rgba(0, 242, 255, 0.04);
+    color: var(--gg-cyan);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0, 242, 255, 0.08);
+    padding: 0.8rem 1rem;
+}
+
+.glass-table td {
+    border-bottom: 1px solid rgba(0, 242, 255, 0.04);
+    padding: 0.7rem 1rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.glass-table tr:last-child td {
+    border-bottom: none;
+}
+
+.glass-table tr:hover td {
+    background: rgba(0, 242, 255, 0.03);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+    color: #fff;
+}
+
+h1 i,
+h2 i,
+h4 i,
+h5 i {
+    color: var(--gg-cyan);
+    margin-right: 0.5rem;
+    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.3));
+}
+
+/* --------------------------------------------------------------------------
+   Formularios
+   -------------------------------------------------------------------------- */
+.form-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.form-control,
+.form-select {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(0, 242, 255, 0.12);
+    border-radius: 12px;
+    color: #fff;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: var(--gg-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 242, 255, 0.1);
+    color: #fff;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.form-select option {
+    background: #0a1628;
+    color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   Botones
+   -------------------------------------------------------------------------- */
+.btn-neon {
+    background: linear-gradient(135deg, rgba(0, 242, 255, 0.12), rgba(179, 0, 255, 0.08));
+    border: 1px solid rgba(0, 242, 255, 0.25);
+    color: var(--gg-cyan);
+    border-radius: 12px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-neon:hover,
+.btn-neon:focus {
+    background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(179, 0, 255, 0.15));
+    border-color: var(--gg-cyan);
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+    color: #fff;
+}
+
+.btn-neon:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-neon-sm {
+    background: rgba(0, 242, 255, 0.08);
+    border: 1px solid rgba(0, 242, 255, 0.15);
+    color: var(--gg-cyan);
+    border-radius: 8px;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.btn-neon-sm:hover {
+    background: rgba(0, 242, 255, 0.15);
+    border-color: var(--gg-cyan);
+    color: #fff;
+}
+
+.btn-neon-sm.purple {
+    border-color: rgba(179, 0, 255, 0.2);
+    color: #c44dff;
+}
+
+.btn-neon-sm.purple:hover {
+    background: rgba(179, 0, 255, 0.15);
+    border-color: #c44dff;
+}
+
+.btn-neon-outline {
+    background: transparent;
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    color: var(--gg-cyan);
+    border-radius: 10px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-neon-outline:hover {
+    background: rgba(0, 242, 255, 0.08);
+    border-color: var(--gg-cyan);
+    color: #fff;
+}
+
+.btn-delete-clase {
+    background: rgba(255, 51, 102, 0.08);
+    border: 1px solid rgba(255, 51, 102, 0.15);
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+    text-decoration: none;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.btn-delete-clase:hover {
+    background: rgba(255, 51, 102, 0.2);
+    border-color: rgba(255, 51, 102, 0.4);
+    box-shadow: 0 0 12px rgba(255, 51, 102, 0.15);
+}
+
+.btn-delete-clase i {
+    font-size: 0.85rem;
+    color: #ff6688;
+}
+
+/* --------------------------------------------------------------------------
+   Mensajes, etiquetas y estados vacíos
+   -------------------------------------------------------------------------- */
+.app-alert {
+    border-radius: 12px;
+    font-size: 0.88rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid transparent;
+}
+
+.app-alert.success,
+.alert-futura {
+    background: rgba(0, 255, 136, 0.08);
+    border-color: rgba(0, 255, 136, 0.2);
+    color: #00ff88;
+}
+
+.app-alert.danger,
+.alert-futura.danger {
+    background: rgba(255, 51, 102, 0.08);
+    border-color: rgba(255, 51, 102, 0.2);
+    color: #ff6688;
+}
+
+.app-alert.warning {
+    background: rgba(255, 193, 7, 0.08);
+    border-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.app-alert.info {
+    background: rgba(0, 242, 255, 0.08);
+    border-color: rgba(0, 242, 255, 0.2);
+    color: var(--gg-cyan);
+}
+
+.codigo-badge {
+    font-family: 'Courier New', monospace;
+    background: rgba(179, 0, 255, 0.08);
+    color: #c44dff;
+    border: 1px solid rgba(179, 0, 255, 0.15);
+    border-radius: 8px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.glass-table td strong {
+    white-space: nowrap;
+}
+
+.profesor-label,
+.tema-text {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.8rem;
+}
+
+.alumno-tag {
+    display: inline-block;
+    background: rgba(0, 242, 255, 0.06);
+    border: 1px solid rgba(0, 242, 255, 0.1);
+    border-radius: 20px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: rgba(255, 255, 255, 0.25);
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+    color: rgba(0, 242, 255, 0.15);
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.detail-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 242, 255, 0.06);
+}
+
+@media (max-width: 991px) {
+    .navbar-futura .navbar-collapse {
+        margin-top: 0.5rem;
+    }
+
+    .user-info {
+        margin: 0.5rem 0;
+    }
+}
